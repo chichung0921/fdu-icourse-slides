@@ -69,7 +69,7 @@ icourse.fudan.edu.cn
 
 ### 4.2 运行索引生成命令
 
-把下面命令中的 `COURSE_ID` 和 `TENANT_CODE` 替换成目标课程参数，同时把输出文件名里的 `COURSE_ID` 也替换掉。
+把下面命令中的 `COURSE_ID` 和 `TENANT_CODE` 替换成目标课程参数，同时把输出文件名里的 `COURSE_ID` 也替换掉（共替换命令开头三处）。
 
 ```bash
 mkdir -p tmp/icourse
@@ -312,3 +312,7 @@ output/icourse_COURSE_ID_slides/<lesson>/urls.txt
 - 不要把账号密码写进脚本或教程。
 - 不要公开包含个人登录态的 cookie、token 或完整浏览器会话信息。
 - 本流程只使用已登录浏览器当前用户可访问的课程资源。
+
+## 10. 后续工作流
+- 拿到PDF课件之后可以将课件放入Mathpix中转文字，即可得到文字版（带公式）课件；
+- Mathpix中OCR识别会出现一些误差，可以将生成的文本喂给AI进一步修改和调整。
