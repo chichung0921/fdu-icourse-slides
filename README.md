@@ -33,7 +33,7 @@ FUDAN_ICOURSE_SLIDES_TUTORIAL.md
 ## Basic Workflow
 
 1. Open the target course page in Safari and log in.
-2. Generate a browser-side PPT index JSON using the Safari AppleScript command in the tutorial.
+2. Generate a browser-side PPT index JSON using the Safari AppleScript polling command in the tutorial.
 3. Convert the indexed PPT screenshots into PDFs:
 
 ```bash
@@ -43,6 +43,8 @@ python3 fudan_icourse_slides.py \
 ```
 
 Lessons without PPT screenshot indexes are skipped.
+
+Safari's AppleScript bridge does not wait for JavaScript promises directly, so the tutorial uses a polling pattern instead of returning an `async` result from `do JavaScript`.
 
 ## Safety
 

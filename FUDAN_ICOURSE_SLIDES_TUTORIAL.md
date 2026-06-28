@@ -45,6 +45,8 @@ https://icourse.fudan.edu.cn/coursedetail?course_id=COURSE_ID&tenant_code=TENANT
 
 推荐使用 Safari 的 AppleScript 方式生成索引。这个索引文件只记录课程课次和课件截图接口返回值，不需要手动复制 token。
 
+注意：Safari 的 `do JavaScript` 不会直接等待 `async` / `await` 的 Promise 返回值。因此下面的命令采用“页面变量 + AppleScript 轮询”的方式：先让页面自己异步请求接口并把结果写入 `window.__ICOURSE_PPT_JSON__`，再由 AppleScript 等待结果写入文件。
+
 ### 4.1 开启 Safari JavaScript 自动化
 
 Safari 菜单栏打开：
@@ -75,6 +77,9 @@ mkdir -p tmp/icourse
 osascript <<'APPLESCRIPT' > tmp/icourse/icourse_COURSE_ID_ppt_index.json
 tell application id "com.apple.Safari"
   set js to "
+window.__ICOURSE_PPT_JSON__ = '';
+window.__ICOURSE_PPT_ERROR__ = '';
+
 (async () => {
   const COURSE_ID = 'COURSE_ID';
   const TENANT_CODE = 'TENANT_CODE';
@@ -84,7 +89,7 @@ tell application id "com.apple.Safari"
     let token = rawCookieToken ? decodeURIComponent(rawCookieToken) : (localStorage.getItem('token') || '');
     const match = token.match(/_token\\\";i:\\d+;s:\\d+:\\\"(.+?)\\\"/) || token.match(/_token[^\\\"]*\\\"(.+?)\\\"/);
     if (match) token = match[1];
-    return token ? { Authorization: token.startsWith('Bearer ') ? token : `Bearer ${token}` } : {};
+    return token ? { Authorization: token.startsWith('Bearer ') ? token : 'Bearer ' + token } : {};
   }
 
   async function getJson(path, query = {}) {
@@ -142,15 +147,33 @@ tell application id "com.apple.Safari"
     });
   }
 
-  return JSON.stringify({
+  window.__ICOURSE_PPT_JSON__ = JSON.stringify({
     course_id: COURSE_ID,
     tenant_code: TENANT_CODE,
+    safari_url: location.href,
+    has_token: document.cookie.includes('_token') || !!localStorage.getItem('token'),
     generated_at: new Date().toISOString(),
+    lesson_count: lessons.length,
     lessons
   }, null, 2);
-})()
+})().catch(error => {
+  window.__ICOURSE_PPT_ERROR__ = String(error && (error.stack || error.message || error));
+});
+'started';
 "
   do JavaScript js in document 1
+
+  repeat 240 times
+    delay 0.5
+
+    set errText to do JavaScript "window.__ICOURSE_PPT_ERROR__ || ''" in document 1
+    if errText is not "" then error errText
+
+    set resultText to do JavaScript "window.__ICOURSE_PPT_JSON__ || ''" in document 1
+    if resultText starts with "{" then return resultText
+  end repeat
+
+  error "Timed out waiting for iCourse PPT index JSON."
 end tell
 APPLESCRIPT
 ```
@@ -161,7 +184,7 @@ APPLESCRIPT
 python3 -m json.tool tmp/icourse/icourse_COURSE_ID_ppt_index.json > /dev/null
 ```
 
-如果 JSON 文件为空或不是合法 JSON，通常是 Safari 没有开启 Apple Events JavaScript，或者当前标签页没有停在 `icourse.fudan.edu.cn`。
+如果 JSON 文件为空或不是合法 JSON，通常是 Safari 没有开启 Apple Events JavaScript，当前标签页没有停在 `icourse.fudan.edu.cn`，或者命令被提前中断。若终端报 `Timed out waiting for iCourse PPT index JSON.`，请刷新课程页并重新登录后再试。
 
 ## 5. 批量生成每节课 PDF
 
