@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+.venv/
+venv/
+tmp/
+output/
+downloads/
+*.pdf
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.bmp
